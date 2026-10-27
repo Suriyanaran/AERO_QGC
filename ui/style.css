@@ -1,0 +1,1062 @@
+/* ==========================================================================
+   AERO-Q GCS | Tactical Cyberpunk Blue & Black Design System
+   ========================================================================== */
+
+:root {
+  /* Deep Tactical Black Palette */
+  --bg-deep: #03060d;
+  --bg-panel: #070c17;
+  --bg-card: rgba(11, 18, 33, 0.75);
+  --bg-card-hover: rgba(16, 26, 48, 0.85);
+  --bg-input: #060a14;
+  
+  /* Electric Cyan & Aerospace Blue Accents */
+  --cyan-primary: #00e5ff;
+  --cyan-bright: #38bdf8;
+  --cyan-glow: rgba(0, 229, 255, 0.4);
+  --cyan-border: rgba(0, 229, 255, 0.22);
+  --blue-accent: #0284c7;
+  --blue-dark: #034269;
+  
+  /* Tactical Status Colors */
+  --green-ok: #00ff88;
+  --green-glow: rgba(0, 255, 136, 0.4);
+  --orange-warn: #ff9800;
+  --red-alert: #ff2d55;
+  --red-glow: rgba(255, 45, 85, 0.4);
+  
+  /* Typography */
+  --font-hud: 'Orbitron', -apple-system, sans-serif;
+  --font-data: 'Rajdhani', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  /* Borders & Shadows */
+  --border-tactical: 1px solid var(--cyan-border);
+  --glow-subtle: 0 0 12px rgba(0, 229, 255, 0.15);
+  --glow-active: 0 0 20px rgba(0, 229, 255, 0.35);
+  --corner-cut: 4px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body.tactical-hud-theme {
+  background-color: var(--bg-deep);
+  color: #e2e8f0;
+  font-family: var(--font-data);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(0, 229, 255, 0.08) 0%, transparent 60%),
+    linear-gradient(to right, rgba(0, 229, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 229, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 40px 40px, 40px 40px;
+}
+
+/* Master Layout Grid */
+.gcs-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ==========================================================================
+   TOP TACTICAL HEADER
+   ========================================================================== */
+
+.tactical-header {
+  height: 64px;
+  background: linear-gradient(180deg, #0a1120 0%, #050912 100%);
+  border-bottom: 1px solid var(--cyan-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 15px rgba(0, 229, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 1000;
+  position: relative;
+}
+
+.tactical-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--cyan-primary) 50%, transparent 100%);
+  opacity: 0.8;
+}
+
+/* Brand Emblem */
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-logo-container {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-logo-img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px var(--cyan-primary));
+}
+
+.logo-pulse {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--cyan-primary);
+  opacity: 0.3;
+  animation: pulse-ring 2.5s infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.5; }
+  50% { transform: scale(1.15); opacity: 0.1; }
+  100% { transform: scale(0.9); opacity: 0.5; }
+}
+
+.brand-title {
+  font-family: var(--font-hud);
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+}
+
+.accent-cyan {
+  color: var(--cyan-primary);
+  text-shadow: 0 0 10px var(--cyan-glow);
+}
+
+.brand-sub {
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* Header Status Badges */
+.header-badges {
+  display: flex;
+  gap: 12px;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border-radius: 4px;
+  background: rgba(11, 18, 33, 0.85);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  font-family: var(--font-hud);
+  font-size: 0.75rem;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.pill-label {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.pill-value {
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green-ok);
+  box-shadow: 0 0 8px var(--green-ok);
+  animation: pulse-dot 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.arm-pill.disarmed {
+  border-color: rgba(255, 152, 0, 0.4);
+}
+.arm-pill.disarmed .pill-value {
+  color: var(--orange-warn);
+}
+
+.arm-pill.armed {
+  border-color: var(--red-alert);
+  background: rgba(255, 45, 85, 0.15);
+  box-shadow: 0 0 15px rgba(255, 45, 85, 0.4);
+}
+.arm-pill.armed .pill-value {
+  color: var(--red-alert);
+  animation: blink-arm 1s infinite;
+}
+
+@keyframes blink-arm {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Header Metrics */
+.header-metrics {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.blackbox-block {
+  cursor: pointer;
+  border-color: rgba(0, 255, 136, 0.3) !important;
+  transition: all 0.2s ease;
+}
+.blackbox-block:hover {
+  border-color: var(--green-ok) !important;
+  box-shadow: 0 0 12px var(--green-glow);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   FPV CAMERA WINDOW (PICTURE-IN-PICTURE)
+   ========================================================================== */
+
+.fpv-camera-window {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  width: 320px;
+  background: rgba(4, 8, 16, 0.92);
+  border: 1px solid var(--cyan-primary);
+  border-radius: 6px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.9), 0 0 15px rgba(0, 229, 255, 0.25);
+  z-index: 1000;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+}
+
+.fpv-header {
+  height: 28px;
+  background: linear-gradient(90deg, #07101f 0%, #03060d 100%);
+  border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+}
+
+.fpv-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-hud);
+  font-size: 0.65rem;
+  color: #38bdf8;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.fpv-rec-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red-alert);
+  box-shadow: 0 0 6px var(--red-alert);
+  animation: blink-arm 1s infinite;
+}
+
+.fpv-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.fpv-btn-icon {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.2s ease;
+}
+.fpv-btn-icon:hover {
+  color: var(--cyan-primary);
+}
+
+.fpv-screen {
+  position: relative;
+  width: 100%;
+  height: 190px;
+  background: #020408;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#fpv-video-element {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+}
+
+#fpv-sim-canvas {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Tactical OSD on Camera */
+.fpv-osd-top-left, .fpv-osd-top-right, .fpv-osd-bottom {
+  position: absolute;
+  font-family: var(--font-hud);
+  font-size: 0.65rem;
+  color: #00ff88;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 255, 136, 0.6);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.fpv-osd-top-left { top: 6px; left: 8px; }
+.fpv-osd-top-right { top: 6px; right: 8px; }
+.fpv-osd-bottom { bottom: 6px; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+/* FPV Reticle Crosshairs */
+.fpv-crosshair {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  pointer-events: none;
+  z-index: 10;
+}
+.cross-line-h {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(0, 255, 136, 0.7);
+  box-shadow: 0 0 4px #00ff88;
+}
+.cross-line-v {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(0, 255, 136, 0.7);
+  box-shadow: 0 0 4px #00ff88;
+}
+.cross-box {
+  position: absolute;
+  top: 25%;
+  left: 25%;
+  width: 50%;
+  height: 50%;
+  border: 1px solid rgba(0, 255, 136, 0.8);
+}
+
+.metric-icon {
+  font-size: 1.1rem;
+}
+
+.metric-data {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-val {
+  font-family: var(--font-hud);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--cyan-primary);
+  text-shadow: 0 0 8px var(--cyan-glow);
+}
+
+.metric-unit {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   WORKSPACE 3-COLUMN LAYOUT
+   ========================================================================== */
+
+.tactical-workspace {
+  display: grid;
+  grid-template-columns: 370px 1fr 360px;
+  flex: 1;
+  overflow: hidden;
+  background: var(--bg-deep);
+}
+
+/* Cards & Panel Layout */
+.left-panel, .right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background: var(--bg-panel);
+  overflow-y: auto;
+  border-right: 1px solid var(--cyan-border);
+}
+
+.right-panel {
+  border-right: none;
+  border-left: 1px solid var(--cyan-border);
+}
+
+.card {
+  background: var(--bg-card);
+  border: var(--border-tactical);
+  border-radius: 6px;
+  padding: 12px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 12px;
+  height: 2px;
+  background: var(--cyan-primary);
+  box-shadow: 0 0 6px var(--cyan-primary);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.12);
+}
+
+.card-title {
+  font-family: var(--font-hud);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #94a3b8;
+}
+
+.card-badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  background: rgba(0, 229, 255, 0.15);
+  color: var(--cyan-primary);
+  border-radius: 2px;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   PRIMARY FLIGHT DISPLAY (PFD)
+   ========================================================================== */
+
+.pfd-viewport {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  background: #020409;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
+}
+
+#pfd-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.pfd-readout {
+  position: absolute;
+  background: rgba(4, 8, 16, 0.85);
+  padding: 2px 6px;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  font-family: var(--font-hud);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--cyan-primary);
+  border-radius: 2px;
+}
+
+.pfd-pitch-readout { bottom: 8px; left: 8px; }
+.pfd-roll-readout  { bottom: 8px; right: 8px; }
+.pfd-yaw-readout   { top: 8px; left: 50%; transform: translateX(-50%); }
+
+/* ==========================================================================
+   BUTTONS & TACTICAL CONTROLS
+   ========================================================================== */
+
+.tactical-btn {
+  background: linear-gradient(180deg, #0f1c30 0%, #08111e 100%);
+  border: 1px solid var(--cyan-border);
+  color: #ffffff;
+  font-family: var(--font-hud);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.tactical-btn:hover {
+  border-color: var(--cyan-primary);
+  box-shadow: 0 0 12px var(--cyan-glow);
+  transform: translateY(-1px);
+}
+
+.tactical-btn:active {
+  transform: translateY(1px);
+}
+
+/* Flight Mode Grid */
+.mode-button-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mode-btn.active {
+  background: linear-gradient(180deg, #0099b8 0%, #006078 100%);
+  border-color: var(--cyan-primary);
+  box-shadow: 0 0 14px var(--cyan-glow);
+  color: #ffffff;
+}
+
+.rtl-btn {
+  border-color: rgba(255, 152, 0, 0.5);
+}
+.rtl-btn:hover {
+  border-color: var(--orange-warn);
+  box-shadow: 0 0 12px rgba(255, 152, 0, 0.4);
+}
+
+.land-btn {
+  border-color: rgba(0, 255, 136, 0.4);
+}
+
+/* Arming Toggle */
+.arm-toggle-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(180deg, #182236 0%, #0c1424 100%);
+  border: 1px solid var(--cyan-primary);
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.arm-toggle-btn.armed {
+  background: linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%);
+  border-color: var(--red-alert);
+  box-shadow: 0 0 18px var(--red-glow);
+}
+
+/* Takeoff Box */
+.takeoff-box {
+  background: rgba(6, 10, 20, 0.7);
+  border: 1px dashed rgba(0, 229, 255, 0.2);
+  border-radius: 4px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.takeoff-input-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.tactical-input {
+  background: var(--bg-input);
+  border: 1px solid var(--cyan-border);
+  color: var(--cyan-primary);
+  font-family: var(--font-hud);
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  width: 70px;
+  text-align: center;
+  border-radius: 3px;
+}
+
+.takeoff-btn {
+  width: 100%;
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  border-color: var(--cyan-bright);
+}
+
+/* ==========================================================================
+   CENTER PANEL: TACTICAL MAP & MISSION PLANNER
+   ========================================================================== */
+
+.center-panel {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  background: #020409;
+}
+
+.map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#tactical-map {
+  width: 100%;
+  height: 100%;
+  background: #040812;
+}
+
+/* Dark mode styling for Leaflet tiles */
+.leaflet-tile {
+  filter: contrast(1.1) brightness(0.95);
+}
+
+.leaflet-control-layers {
+  background: rgba(7, 12, 23, 0.92) !important;
+  border: 1px solid var(--cyan-primary) !important;
+  color: #38bdf8 !important;
+  font-family: var(--font-hud) !important;
+  font-size: 0.75rem !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8) !important;
+}
+
+.leaflet-control-layers label {
+  color: #cbd5e1 !important;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   POLICE TACTICAL DRONE MARKER & EMERGENCY STROBE LIGHTS
+   ========================================================================== */
+
+.tactical-drone-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+#drone-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  transition: transform 0.1s linear;
+  pointer-events: none;
+}
+
+.police-drone-svg {
+  width: 64px;
+  height: 64px;
+  overflow: visible;
+  filter: drop-shadow(0 0 12px rgba(0, 180, 255, 0.75));
+  animation: police-ambient-pulse 0.6s infinite alternate ease-in-out;
+}
+
+/* Police Red & Blue Alternating Ambient Halo */
+@keyframes police-ambient-pulse {
+  0%, 45% {
+    filter: drop-shadow(0 0 16px rgba(255, 23, 68, 0.9)) drop-shadow(0 0 28px rgba(255, 0, 50, 0.5));
+  }
+  55%, 100% {
+    filter: drop-shadow(0 0 16px rgba(0, 150, 255, 0.95)) drop-shadow(0 0 28px rgba(0, 120, 255, 0.55));
+  }
+}
+
+/* Police Red Emergency Strobe (Wig-Wag Triple Pulse) */
+.police-light-red {
+  animation: police-strobe-red 0.6s infinite ease-in-out;
+}
+
+@keyframes police-strobe-red {
+  0%, 100% {
+    opacity: 0.15;
+    filter: drop-shadow(0 0 1px rgba(255, 20, 50, 0.2));
+  }
+  2%, 14%, 26% {
+    opacity: 1;
+    filter: drop-shadow(0 0 10px #ff0033) drop-shadow(0 0 20px #ff1744);
+  }
+  8%, 20% {
+    opacity: 0.2;
+    filter: drop-shadow(0 0 2px rgba(255, 20, 50, 0.3));
+  }
+  35%, 95% {
+    opacity: 0.15;
+    filter: none;
+  }
+}
+
+/* Police Blue Emergency Strobe (Wig-Wag Triple Pulse) */
+.police-light-blue {
+  animation: police-strobe-blue 0.6s infinite ease-in-out;
+}
+
+@keyframes police-strobe-blue {
+  0%, 48% {
+    opacity: 0.15;
+    filter: none;
+  }
+  50%, 62%, 74% {
+    opacity: 1;
+    filter: drop-shadow(0 0 10px #0066ff) drop-shadow(0 0 20px #00e5ff);
+  }
+  56%, 68% {
+    opacity: 0.2;
+    filter: drop-shadow(0 0 2px rgba(0, 120, 255, 0.3));
+  }
+  82%, 100% {
+    opacity: 0.15;
+    filter: drop-shadow(0 0 1px rgba(0, 120, 255, 0.2));
+  }
+}
+/* Floating Mission Planner Toolbar */
+.map-floating-toolbar {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(7, 12, 23, 0.88);
+  border: var(--border-tactical);
+  border-radius: 6px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.8), var(--glow-subtle);
+  z-index: 1000;
+}
+
+.toolbar-group {
+  display: flex;
+  gap: 6px;
+}
+
+.map-action-btn {
+  background: rgba(14, 23, 42, 0.85);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  color: #cbd5e1;
+  font-family: var(--font-hud);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.map-action-btn.active, .map-action-btn:hover {
+  background: rgba(0, 229, 255, 0.2);
+  border-color: var(--cyan-primary);
+  color: #ffffff;
+}
+
+.map-action-btn.accent-btn {
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  border-color: var(--cyan-primary);
+}
+
+.map-action-btn.green-btn {
+  background: linear-gradient(180deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+  border-color: var(--green-ok);
+}
+
+.mission-stats-group {
+  display: flex;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  padding: 0 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mission-stat strong {
+  color: var(--cyan-primary);
+  font-family: var(--font-hud);
+}
+
+/* Map Coordinates Overlay */
+.map-corner-data {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  background: rgba(5, 9, 18, 0.85);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  border-radius: 4px;
+  padding: 6px 12px;
+  display: flex;
+  gap: 14px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: #94a3b8;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+}
+
+.coord-tag span {
+  color: var(--cyan-primary);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   RIGHT PANEL: SENSORS, MOTORS & TELEMETRY CHARTS
+   ========================================================================== */
+
+/* Sensors Grid */
+.sensors-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sensor-chip {
+  background: rgba(6, 10, 20, 0.75);
+  border: 1px solid rgba(0, 229, 255, 0.15);
+  border-radius: 4px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sensor-name {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.5px;
+}
+
+.sensor-val {
+  font-family: var(--font-hud);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--green-ok);
+  text-shadow: 0 0 6px var(--green-glow);
+}
+
+/* Motors Output */
+.motors-block {
+  background: rgba(6, 10, 20, 0.6);
+  border: 1px solid rgba(0, 229, 255, 0.12);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+.motors-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.motor-bars {
+  display: flex;
+  justify-content: space-around;
+  height: 55px;
+  align-items: flex-end;
+}
+
+.motor-bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  width: 22px;
+  background: rgba(14, 23, 42, 0.6);
+  border-radius: 2px;
+  position: relative;
+  justify-content: flex-end;
+}
+
+.motor-fill {
+  width: 100%;
+  background: linear-gradient(0deg, var(--cyan-primary) 0%, #38bdf8 100%);
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--cyan-glow);
+  transition: height 0.15s ease;
+}
+
+.motor-tag {
+  position: absolute;
+  bottom: -18px;
+  font-family: var(--font-hud);
+  font-size: 0.62rem;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+/* Telemetry Chart */
+.graph-wrapper {
+  background: #03060f;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  overflow: hidden;
+  height: 130px;
+}
+
+#telemetry-chart {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Connection Form */
+.conn-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.conn-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.conn-field label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.tactical-select {
+  background: var(--bg-input);
+  border: 1px solid var(--cyan-border);
+  color: var(--cyan-primary);
+  font-family: var(--font-hud);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 3px;
+  outline: none;
+}
+
+.tactical-select option {
+  background: #080f1e;
+  color: #ffffff;
+}
+
+.conn-btn {
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  border-color: var(--cyan-primary);
+  padding: 10px;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   BOTTOM TACTICAL FOOTER & MAVLINK LOG
+   ========================================================================== */
+
+.tactical-footer {
+  height: 72px;
+  background: #040812;
+  border-top: 1px solid var(--cyan-border);
+  padding: 6px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 1000;
+}
+
+.console-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-hud);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.8px;
+}
+
+.pulse-cyan {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cyan-primary);
+  box-shadow: 0 0 6px var(--cyan-primary);
+  animation: pulse-dot 1.2s infinite;
+}
+
+.console-scrollbox {
+  flex: 1;
+  background: rgba(2, 4, 10, 0.85);
+  border: 1px solid rgba(0, 229, 255, 0.12);
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  overflow-y: auto;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.console-scrollbox::-webkit-scrollbar {
+  width: 4px;
+}
+.console-scrollbox::-webkit-scrollbar-thumb {
+  background: var(--cyan-border);
+  border-radius: 2px;
+}
+
+.log-line.info { color: #38bdf8; }
+.log-line.warn { color: var(--orange-warn); }
+.log-line.alert { color: var(--red-alert); }

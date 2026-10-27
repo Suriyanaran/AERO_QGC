@@ -1,0 +1,1 @@
+timestamp,flight_time,mode,armed,pitch,roll,yaw,lat,lon,alt,target_alt,groundspeed,airspeed,climb,voltage,current,battery_pct,satellites,fix_type,hdop,rssi

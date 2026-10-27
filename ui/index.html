@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AERO-Q GCS | Tactical Flight Control System</title>
+  
+  <!-- Google Fonts: Orbitron (Headers/Digital) & Rajdhani (Avionics/HUD) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS for Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Custom Cyberpunk Tactical Style -->
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/x-icon" href="/assets/logo.ico">
+</head>
+<body class="tactical-hud-theme">
+
+  <!-- Main Viewport Grid -->
+  <div class="gcs-container">
+    
+    <!-- TOP TACTICAL HEADER -->
+    <header class="tactical-header">
+      <div class="brand-block">
+        <div class="brand-logo-container">
+          <img src="/assets/logo.png" alt="Aero-Q Logo" class="brand-logo-img">
+          <div class="logo-pulse"></div>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">AERO-Q <span class="accent-cyan">GCS</span></div>
+          <div class="brand-sub">TACTICAL AVIONICS • DEFENSE SUITE v2.4</div>
+        </div>
+      </div>
+
+      <!-- Quick Telemetry HUD Badges -->
+      <div class="header-badges">
+        <div class="status-pill link-pill" id="badge-link">
+          <span class="pulse-dot"></span>
+          <span class="pill-label">LINK:</span>
+          <span class="pill-value" id="val-link">CONNECTING...</span>
+        </div>
+
+        <div class="status-pill mode-pill" id="badge-mode">
+          <span class="pill-label">MODE:</span>
+          <span class="pill-value" id="val-mode">STABILIZE</span>
+        </div>
+
+        <div class="status-pill arm-pill disarmed" id="badge-arm">
+          <span class="pill-label">STATUS:</span>
+          <span class="pill-value" id="val-arm">DISARMED</span>
+        </div>
+      </div>
+
+      <!-- Top Right Telemetry Numbers -->
+      <div class="header-metrics">
+        <div class="metric-block">
+          <div class="metric-icon battery-icon">⚡</div>
+          <div class="metric-data">
+            <span class="metric-val" id="top-batt-pct">98%</span>
+            <span class="metric-unit" id="top-batt-volt">16.6V</span>
+          </div>
+        </div>
+
+        <div class="metric-block">
+          <div class="metric-icon gps-icon">🛰️</div>
+          <div class="metric-data">
+            <span class="metric-val" id="top-gps-sats">16 SATS</span>
+            <span class="metric-unit" id="top-gps-fix">3D FIX</span>
+          </div>
+        </div>
+
+        <div class="metric-block">
+          <div class="metric-icon signal-icon">📶</div>
+          <div class="metric-data">
+            <span class="metric-val" id="top-rssi">99%</span>
+            <span class="metric-unit">RC LINK</span>
+          </div>
+        </div>
+
+        <div class="metric-block blackbox-block" id="btn-export-blackbox" title="Click to Download Real-Time Blackbox Telemetry Log (.CSV)">
+          <div class="metric-icon">💾</div>
+          <div class="metric-data">
+            <span class="metric-val" id="top-blackbox-status" style="color: #00ff88;">REC ⏺️</span>
+            <span class="metric-unit" id="top-blackbox-records">0 LOGS (CSV)</span>
+          </div>
+        </div>
+
+        <div class="metric-block clock-block">
+          <div class="metric-icon">⏱️</div>
+          <div class="metric-data">
+            <span class="metric-val" id="top-flight-time">00:00:00</span>
+            <span class="metric-unit">FLIGHT TIME</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- WORKSPACE (LEFT PFD + CENTER MAP + RIGHT DECK) -->
+    <main class="tactical-workspace">
+
+      <!-- LEFT COLUMN: PRIMARY FLIGHT DISPLAY & CONTROLS -->
+      <section class="left-panel">
+        
+        <!-- PFD Container -->
+        <div class="card pfd-card">
+          <div class="card-header">
+            <span class="card-title">PRIMARY FLIGHT DISPLAY (PFD)</span>
+            <span class="card-badge">60 FPS</span>
+          </div>
+          <div class="pfd-viewport">
+            <canvas id="pfd-canvas" width="340" height="280"></canvas>
+            
+            <!-- Pitch & Roll digital overlays -->
+            <div class="pfd-readout pfd-pitch-readout">PITCH: <span id="pfd-pitch-val">0.0°</span></div>
+            <div class="pfd-readout pfd-roll-readout">ROLL: <span id="pfd-roll-val">0.0°</span></div>
+            <div class="pfd-readout pfd-yaw-readout">YAW: <span id="pfd-yaw-val">000°</span></div>
+          </div>
+        </div>
+
+        <!-- Flight Commands & Modes -->
+        <div class="card commands-card">
+          <div class="card-header">
+            <span class="card-title">FLIGHT MODES & COMMANDS</span>
+          </div>
+          
+          <div class="mode-button-grid">
+            <button class="tactical-btn mode-btn active" data-mode="LOITER" id="btn-loiter">LOITER</button>
+            <button class="tactical-btn mode-btn" data-mode="ALT_HOLD" id="btn-althold">ALT HOLD</button>
+            <button class="tactical-btn mode-btn" data-mode="STABILIZE" id="btn-stabilize">STABILIZE</button>
+            <button class="tactical-btn mode-btn" data-mode="AUTO" id="btn-auto">AUTO MISSION</button>
+            <button class="tactical-btn mode-btn rtl-btn" data-mode="RTL" id="btn-rtl">RTL (RETURN)</button>
+            <button class="tactical-btn mode-btn land-btn" data-mode="LAND" id="btn-land">LAND</button>
+          </div>
+
+          <!-- Arming & Takeoff Actions -->
+          <div class="action-row">
+            <button class="tactical-btn arm-toggle-btn" id="btn-arm-toggle">
+              <span class="arm-icon">🔒</span>
+              <span id="arm-btn-text">ARM MOTORS</span>
+            </button>
+          </div>
+
+          <div class="takeoff-box">
+            <div class="takeoff-input-row">
+              <label for="takeoff-alt-input">TAKEOFF ALT (M):</label>
+              <input type="number" id="takeoff-alt-input" value="10" min="2" max="100" class="tactical-input">
+            </div>
+            <button class="tactical-btn takeoff-btn" id="btn-takeoff">EXECUTE TAKEOFF</button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- CENTER COLUMN: TACTICAL MAP & WAYPOINT MISSION PLANNER -->
+      <section class="center-panel">
+        <div class="map-wrapper">
+          <!-- Leaflet Map Container -->
+          <div id="tactical-map"></div>
+
+          <!-- Floating Mission Planning Bar -->
+          <div class="map-floating-toolbar">
+            <div class="toolbar-group">
+              <button class="map-action-btn active" id="btn-mode-nav">NAVIGATE</button>
+              <button class="map-action-btn" id="btn-mode-plan">+ ADD WAYPOINTS</button>
+              <button class="map-action-btn" id="btn-toggle-fpv">📷 FPV CAMERA</button>
+            </div>
+
+            <div class="mission-stats-group" id="mission-stats-box">
+              <span class="mission-stat">WPs: <strong id="stat-wp-count">0</strong></span>
+              <span class="mission-stat">DIST: <strong id="stat-wp-dist">0.00 km</strong></span>
+              <span class="mission-stat">EST: <strong id="stat-wp-time">0m 00s</strong></span>
+            </div>
+
+            <div class="toolbar-group">
+              <button class="map-action-btn" id="btn-clear-wps">CLEAR</button>
+              <button class="map-action-btn accent-btn" id="btn-upload-wps">UPLOAD TO VEHICLE</button>
+              <button class="map-action-btn green-btn" id="btn-start-mission">EXECUTE AUTO</button>
+            </div>
+          </div>
+
+          <!-- FPV Camera Live Stream Window (Picture-in-Picture) -->
+          <div class="fpv-camera-window" id="fpv-window">
+            <div class="fpv-header">
+              <div class="fpv-title">
+                <span class="fpv-rec-dot"></span>
+                <span>AERO-Q TACTICAL FPV • CAM 1</span>
+              </div>
+              <div class="fpv-controls">
+                <button class="fpv-btn-icon" id="btn-webcam-toggle" title="Switch to Laptop Webcam / USB Video Card">🔄 CAM</button>
+                <button class="fpv-btn-icon" id="btn-fpv-close" title="Close FPV">✕</button>
+              </div>
+            </div>
+
+            <div class="fpv-screen">
+              <video id="fpv-video-element" autoplay playsinline muted></video>
+              
+              <!-- Simulated Aerial Cam Canvas Fallback -->
+              <canvas id="fpv-sim-canvas" width="300" height="190"></canvas>
+
+              <!-- Tactical HUD OSD Overlays on Video Feed -->
+              <div class="fpv-osd-top-left">ALT: <span id="fpv-osd-alt">0.0m</span> | SPD: <span id="fpv-osd-spd">0.0m/s</span></div>
+              <div class="fpv-osd-top-right">BAT: <span id="fpv-osd-bat">16.6V</span></div>
+              
+              <!-- Crosshair Center Reticle -->
+              <div class="fpv-crosshair">
+                <div class="cross-line-h"></div>
+                <div class="cross-line-v"></div>
+                <div class="cross-box"></div>
+              </div>
+
+              <div class="fpv-osd-bottom">HDG: <span id="fpv-osd-hdg">000°</span> | MODE: <span id="fpv-osd-mode">LOITER</span></div>
+            </div>
+          </div>
+
+          <!-- Map Overlays -->
+          <div class="map-corner-data">
+            <div class="coord-tag">LAT: <span id="map-drone-lat">13.082700</span></div>
+            <div class="coord-tag">LON: <span id="map-drone-lon">80.270700</span></div>
+            <div class="coord-tag">ALT: <span id="map-drone-alt">0.00 m</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: SENSORS, TELEMETRY GRAPHS & CONNECTION DECK -->
+      <section class="right-panel">
+        
+        <!-- Sensor & Subsystems Health Card -->
+        <div class="card sensors-card">
+          <div class="card-header">
+            <span class="card-title">AVIONICS HEALTH MATRIX</span>
+          </div>
+          <div class="sensors-grid">
+            <div class="sensor-chip ok">
+              <span class="sensor-name">IMU 1 & 2</span>
+              <span class="sensor-val">CALIBRATED</span>
+            </div>
+            <div class="sensor-chip ok">
+              <span class="sensor-name">COMPASS</span>
+              <span class="sensor-val">LOCKED</span>
+            </div>
+            <div class="sensor-chip ok">
+              <span class="sensor-name">BAROMETER</span>
+              <span class="sensor-val">0.0m AGL</span>
+            </div>
+            <div class="sensor-chip ok">
+              <span class="sensor-name">GPS RECEIVER</span>
+              <span class="sensor-val">3D DGPS</span>
+            </div>
+          </div>
+
+          <!-- Quadcopter Motor Distribution -->
+          <div class="motors-block">
+            <div class="motors-label">QUADCOPTER MOTOR OUTPUTS</div>
+            <div class="motor-bars">
+              <div class="motor-bar-wrapper">
+                <div class="motor-fill" id="m1-fill" style="height: 10%;"></div>
+                <span class="motor-tag">M1</span>
+              </div>
+              <div class="motor-bar-wrapper">
+                <div class="motor-fill" id="m2-fill" style="height: 10%;"></div>
+                <span class="motor-tag">M2</span>
+              </div>
+              <div class="motor-bar-wrapper">
+                <div class="motor-fill" id="m3-fill" style="height: 10%;"></div>
+                <span class="motor-tag">M3</span>
+              </div>
+              <div class="motor-bar-wrapper">
+                <div class="motor-fill" id="m4-fill" style="height: 10%;"></div>
+                <span class="motor-tag">M4</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Telemetry Graphs -->
+        <div class="card graph-card">
+          <div class="card-header">
+            <span class="card-title">TELEMETRY STREAM (ALTITUDE & SPEED)</span>
+          </div>
+          <div class="graph-wrapper">
+            <canvas id="telemetry-chart" width="340" height="130"></canvas>
+          </div>
+        </div>
+
+        <!-- Link & Hardware Connection Deck -->
+        <div class="card connection-card">
+          <div class="card-header">
+            <span class="card-title">COMMUNICATIONS INTERFACE</span>
+          </div>
+          
+          <div class="conn-form">
+            <div class="conn-field">
+              <label>CONNECTION TYPE:</label>
+              <select id="conn-mode-select" class="tactical-select">
+                <option value="simulation">BUILT-IN TACTICAL SIMULATOR (6-DOF)</option>
+                <option value="serial">PIXHAWK / TELEMETRY RADIO (SERIAL)</option>
+                <option value="udp">SITL / COMPANION (UDP:14550)</option>
+              </select>
+            </div>
+
+            <div class="conn-field serial-only-field" id="field-port">
+              <label>COM PORT:</label>
+              <select id="conn-port-select" class="tactical-select">
+                <option value="COM3">COM3 (Default)</option>
+                <option value="COM4">COM4</option>
+                <option value="COM5">COM5</option>
+              </select>
+            </div>
+
+            <div class="conn-field serial-only-field" id="field-baud">
+              <label>BAUD RATE:</label>
+              <select id="conn-baud-select" class="tactical-select">
+                <option value="57600">57600 (SiK Telemetry Radio)</option>
+                <option value="115200">115200 (Direct USB Cable)</option>
+              </select>
+            </div>
+
+            <button class="tactical-btn conn-btn" id="btn-connect">ESTABLISH LINK</button>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- BOTTOM LIVE EVENT & MAVLINK CONSOLE -->
+    <footer class="tactical-footer">
+      <div class="console-label">
+        <span class="pulse-cyan"></span>
+        <span>MAVLINK 2.0 TACTICAL TELEMETRY STREAM & EVENT LOG</span>
+      </div>
+      <div class="console-scrollbox" id="console-output">
+        <div class="log-line info">[INIT] Aero-Q Tactical GCS initialized. Awaiting connection...</div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- PFD & Tactical App Logic -->
+  <script src="pfd.js"></script>
+  <script src="map.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
