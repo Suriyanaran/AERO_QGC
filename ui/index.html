@@ -37,6 +37,11 @@
 
       <!-- Quick Telemetry HUD Badges -->
       <div class="header-badges">
+        <div class="status-pill mode-pill" id="badge-engine" style="border-color: rgba(0, 229, 255, 0.4);">
+          <span class="pill-label">ENGINE:</span>
+          <span class="pill-value" id="val-engine" style="color: #00E5FF;">TACTICAL SIM / FC</span>
+        </div>
+
         <div class="status-pill link-pill" id="badge-link">
           <span class="pulse-dot"></span>
           <span class="pill-label">LINK:</span>
@@ -45,37 +50,43 @@
 
         <div class="status-pill mode-pill" id="badge-mode">
           <span class="pill-label">MODE:</span>
-          <span class="pill-value" id="val-mode">STABILIZE</span>
+          <span class="pill-value" id="val-mode">DISCONNECTED</span>
         </div>
 
         <div class="status-pill arm-pill disarmed" id="badge-arm">
           <span class="pill-label">STATUS:</span>
           <span class="pill-value" id="val-arm">DISARMED</span>
         </div>
+
+        <!-- Direct QGC Backend Launcher Button in Top Header -->
+        <button type="button" id="top-btn-launch-qgc" class="tactical-btn" style="padding: 4px 12px; font-size: 11px; font-weight: bold; background: rgba(0, 229, 255, 0.12); border: 1px solid #00e5ff; color: #00e5ff; cursor: pointer; border-radius: 4px; display: inline-flex; align-items: center; gap: 7px; letter-spacing: 0.5px; height: 30px;" title="Launch QGroundControl Master Backend Engine">
+          <span>🚀 LAUNCH QGC BACKEND</span>
+          <span id="top-qgc-dot" style="width: 8px; height: 8px; border-radius: 50%; background: #ff9500; display: inline-block;"></span>
+        </button>
       </div>
 
       <!-- Top Right Telemetry Numbers -->
       <div class="header-metrics">
-        <div class="metric-block">
+        <div class="metric-block" id="header-battery-block">
           <div class="metric-icon battery-icon">⚡</div>
           <div class="metric-data">
-            <span class="metric-val" id="top-batt-pct">98%</span>
-            <span class="metric-unit" id="top-batt-volt">16.6V</span>
+            <span class="metric-val" id="top-batt-pct">--%</span>
+            <span class="metric-unit" id="top-batt-volt">--V</span>
           </div>
         </div>
 
-        <div class="metric-block">
+        <div class="metric-block" id="header-gps-block">
           <div class="metric-icon gps-icon">🛰️</div>
           <div class="metric-data">
-            <span class="metric-val" id="top-gps-sats">16 SATS</span>
-            <span class="metric-unit" id="top-gps-fix">3D FIX</span>
+            <span class="metric-val" id="top-gps-sats">-- SATS</span>
+            <span class="metric-unit" id="top-gps-fix">NO FIX</span>
           </div>
         </div>
 
-        <div class="metric-block">
+        <div class="metric-block" id="header-rssi-block">
           <div class="metric-icon signal-icon">📶</div>
           <div class="metric-data">
-            <span class="metric-val" id="top-rssi">99%</span>
+            <span class="metric-val" id="top-rssi">--%</span>
             <span class="metric-unit">RC LINK</span>
           </div>
         </div>
@@ -202,7 +213,7 @@
 
               <!-- Tactical HUD OSD Overlays on Video Feed -->
               <div class="fpv-osd-top-left">ALT: <span id="fpv-osd-alt">0.0m</span> | SPD: <span id="fpv-osd-spd">0.0m/s</span></div>
-              <div class="fpv-osd-top-right">BAT: <span id="fpv-osd-bat">16.6V</span></div>
+              <div class="fpv-osd-top-right">BAT: <span id="fpv-osd-bat">--V</span></div>
               
               <!-- Crosshair Center Reticle -->
               <div class="fpv-crosshair">
@@ -233,21 +244,21 @@
             <span class="card-title">AVIONICS HEALTH MATRIX</span>
           </div>
           <div class="sensors-grid">
-            <div class="sensor-chip ok">
+            <div class="sensor-chip ok" id="chip-imu">
               <span class="sensor-name">IMU 1 & 2</span>
-              <span class="sensor-val">CALIBRATED</span>
+              <span class="sensor-val" id="sensor-imu-val">--</span>
             </div>
-            <div class="sensor-chip ok">
+            <div class="sensor-chip ok" id="chip-compass">
               <span class="sensor-name">COMPASS</span>
-              <span class="sensor-val">LOCKED</span>
+              <span class="sensor-val" id="sensor-compass-val">--</span>
             </div>
-            <div class="sensor-chip ok">
+            <div class="sensor-chip ok" id="chip-baro">
               <span class="sensor-name">BAROMETER</span>
-              <span class="sensor-val">0.0m AGL</span>
+              <span class="sensor-val" id="sensor-baro-val">--</span>
             </div>
-            <div class="sensor-chip ok">
+            <div class="sensor-chip ok" id="chip-gps">
               <span class="sensor-name">GPS RECEIVER</span>
-              <span class="sensor-val">3D DGPS</span>
+              <span class="sensor-val" id="sensor-gps-val">--</span>
             </div>
           </div>
 
@@ -292,33 +303,58 @@
           </div>
           
           <div class="conn-form">
+            <!-- Quick Action Buttons: Auto-Detect & QGC Launch -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+              <button type="button" id="btn-auto-connect" class="tactical-btn" style="padding: 8px 4px; font-size: 11px; font-weight: bold; background: linear-gradient(135deg, rgba(0, 229, 255, 0.25) 0%, rgba(0, 120, 255, 0.2) 100%); border: 1px solid #00e5ff; color: #00e5ff; cursor: pointer; letter-spacing: 0.3px;">⚡ AUTO-DETECT DRONE</button>
+              <button type="button" id="btn-panel-qgc-switch" class="tactical-btn" style="padding: 8px 4px; font-size: 11px; font-weight: bold; background: rgba(0, 229, 255, 0.12); border: 1px solid #00e5ff; color: #00e5ff; cursor: pointer; letter-spacing: 0.3px;">🚀 QGC BACKEND</button>
+            </div>
+
             <div class="conn-field">
-              <label>CONNECTION TYPE:</label>
+              <label>BACKEND ENGINE / LINK:</label>
               <select id="conn-mode-select" class="tactical-select">
-                <option value="simulation">BUILT-IN TACTICAL SIMULATOR (6-DOF)</option>
-                <option value="serial">PIXHAWK / TELEMETRY RADIO (SERIAL)</option>
-                <option value="udp">SITL / COMPANION (UDP:14550)</option>
+                <option value="serial" selected>🔌 DIRECT HARDWARE SERIAL (USB / TELEMETRY RADIO)</option>
+                <option value="simulation">🎮 BUILT-IN TACTICAL SIMULATOR (6-DOF)</option>
+                <option value="qgc">⚡ QGROUNDCONTROL BACKEND (UDP 14550)</option>
+                <option value="udp">🌐 CUSTOM SITL / UDP (UDP:14550)</option>
               </select>
             </div>
 
-            <div class="conn-field serial-only-field" id="field-port">
-              <label>COM PORT:</label>
+            <!-- Dedicated QGC Backend Controller Card -->
+            <div id="qgc-control-panel" style="display: none; flex-direction: column; gap: 8px; padding: 10px; background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 4px; margin-bottom: 6px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 11px; color: #8BA3B8; font-weight: bold;">QGC PROCESS:</span>
+                <span id="qgc-status-pill" style="font-size: 10px; padding: 2px 8px; border-radius: 3px; background: rgba(255, 149, 0, 0.2); color: #ff9500; border: 1px solid #ff9500;">CHECKING...</span>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" id="btn-launch-qgc" class="tactical-btn" style="flex: 1; padding: 6px; font-size: 11px; background: rgba(0, 229, 255, 0.15); border: 1px solid #00E5FF; color: #00E5FF; cursor: pointer;">🚀 LAUNCH QGC BACKEND</button>
+                <button type="button" id="btn-qgc-check" class="tactical-btn" style="padding: 6px 10px; font-size: 11px; cursor: pointer;">🔄</button>
+              </div>
+              <div style="font-size: 10px; color: #8BA3B8; line-height: 1.3;">
+                QGroundControl handles autopilot connection & drivers; Aero-Q UI displays live HUD, Tactical Map & Flight Controls.
+              </div>
+            </div>
+
+            <div class="conn-field serial-only-field" id="field-port" style="display: flex;">
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <label style="margin: 0;">COM PORT:</label>
+                <button type="button" id="btn-refresh-ports" class="tactical-btn" style="padding: 2px 8px; font-size: 11px; height: auto; background: rgba(0, 229, 255, 0.15); border: 1px solid #00E5FF; color: #00E5FF; cursor: pointer;">🔄 RESCAN</button>
+              </div>
               <select id="conn-port-select" class="tactical-select">
-                <option value="COM3">COM3 (Default)</option>
-                <option value="COM4">COM4</option>
-                <option value="COM5">COM5</option>
+                <option value="" disabled selected>Scanning ports...</option>
               </select>
             </div>
 
-            <div class="conn-field serial-only-field" id="field-baud">
+            <div class="conn-field serial-only-field" id="field-baud" style="display: flex;">
               <label>BAUD RATE:</label>
               <select id="conn-baud-select" class="tactical-select">
+                <option value="115200" selected>115200 (Direct USB Cable)</option>
                 <option value="57600">57600 (SiK Telemetry Radio)</option>
-                <option value="115200">115200 (Direct USB Cable)</option>
+                <option value="921600">921600 (High-Speed USB)</option>
               </select>
             </div>
 
-            <button class="tactical-btn conn-btn" id="btn-connect">ESTABLISH LINK</button>
+            <button class="tactical-btn conn-btn" id="btn-connect">CONNECT TO BACKEND</button>
+            <div id="conn-help-text" style="font-size: 11px; line-height: 1.4; padding: 6px 8px; border-radius: 4px; display: none;"></div>
           </div>
         </div>
 

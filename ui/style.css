@@ -214,6 +214,42 @@ body.tactical-hud-theme {
   animation: blink-arm 1s infinite;
 }
 
+.link-pill.searching {
+  border-color: var(--orange-warn) !important;
+}
+.link-pill.searching .pill-value {
+  color: var(--orange-warn);
+}
+.link-pill.searching .pulse-dot {
+  background: var(--orange-warn);
+  box-shadow: 0 0 8px var(--orange-warn);
+}
+
+.link-pill.lost {
+  border-color: var(--red-alert) !important;
+}
+.link-pill.lost .pill-value {
+  color: var(--red-alert);
+}
+.link-pill.lost .pulse-dot {
+  background: var(--red-alert);
+  box-shadow: 0 0 8px var(--red-alert);
+}
+
+.link-pill.linked {
+  border-color: var(--green-ok) !important;
+}
+.link-pill.linked .pill-value {
+  color: var(--green-ok);
+}
+
+.sensor-chip.warn .sensor-val {
+  color: var(--orange-warn) !important;
+}
+.sensor-chip.error .sensor-val {
+  color: var(--red-alert) !important;
+}
+
 @keyframes blink-arm {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }

@@ -40,12 +40,22 @@ The local server listens on `http://127.0.0.1:18080`. `main.py` opens the dashbo
 
 ## Connect to a vehicle
 
-The dashboard starts in **Built-in Tactical Simulator** mode. To connect a vehicle, choose a connection type in **Communications Interface**:
+Aero-Q GCS supports 3 connection modes:
 
-- **Serial:** Select the vehicle's COM port and baud rate.
-- **UDP:** Configure the MAVLink source to send to UDP port `14550`.
+### 1. 🔌 Direct Hardware Serial (Recommended for Physical Drones)
+Direct connection to Pixhawk / ArduPilot / PX4 flight controllers:
+1. Connect your flight controller via USB cable or plug in your SiK / 3DR Telemetry Radio.
+2. In the Communications Interface, click **"⚡ AUTO-DETECT & CONNECT DRONE"** — Aero-Q automatically scans all COM ports and baud rates (115200 for direct USB, 57600 for Telemetry Radio) and locks onto the vehicle heartbeat.
+3. You can also manually choose your COM port from the dropdown and click **"CONNECT TO BACKEND"**.
+4. Real-time telemetry (Battery voltage, percentage, satellites, GPS fix, attitude, flight modes) streams directly to the Tactical HUD.
 
-The simulator can be selected again from the same menu. For hardware testing, follow your autopilot and vehicle manufacturer's safety procedures. Confirm the selected connection and flight mode before sending commands; arm, disarm, takeoff, and mode controls can affect a connected vehicle.
+### 2. 🎮 Built-in Tactical Flight Simulator (6-DOF)
+Allows testing the artificial horizon (PFD), tactical map, waypoints, and flight mode commands without connecting physical drone hardware. Select **"BUILT-IN TACTICAL SIMULATOR"** in the dropdown and click connect.
+
+### 3. ⚡ QGroundControl Backend (Optional)
+If you have QGroundControl installed on Windows and wish to use QGC as the MAVLink driver while viewing the Aero-Q tactical dashboard:
+1. Select **"QGROUNDCONTROL BACKEND"**.
+2. Click **"LAUNCH QGC BACKEND"** to run QGC in the background. Telemetry forwards over local UDP port `14550`.
 
 ## Flight logs
 

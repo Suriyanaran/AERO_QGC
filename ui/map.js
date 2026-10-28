@@ -19,6 +19,7 @@ class TacticalMapManager {
     this.lastLat = 13.0827;
     this.lastLon = 80.2707;
     this.lastYaw = 0;
+    this.hasCentered = false;
     
     this.initMap();
   }
@@ -173,11 +174,17 @@ class TacticalMapManager {
   }
 
   updateDronePosition(lat, lon, yaw, alt) {
-    if (!lat || !lon) return;
+    if (!lat || !lon || (Math.abs(lat) < 0.0001 && Math.abs(lon) < 0.0001)) return;
 
     this.lastLat = lat;
     this.lastLon = lon;
     this.lastYaw = yaw || 0;
+
+    // Center map on drone upon first valid GPS fix
+    if (!this.hasCentered && (Math.abs(lat - 13.0827) > 0.0001 || Math.abs(lon - 80.2707) > 0.0001)) {
+      this.map.setView([lat, lon], 17);
+      this.hasCentered = true;
+    }
 
     // Update marker position
     this.droneMarker.setLatLng([lat, lon]);

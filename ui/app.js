@@ -99,6 +99,7 @@ function connectWebSocket() {
 // Handle Incoming Telemetry Packet
 let lastArmedState = null;
 let lastFlightMode = null;
+let lastLinkActive = null;
 
 function handleTelemetryUpdate(data) {
   // 1. Update Primary Flight Display (PFD)
@@ -107,35 +108,95 @@ function handleTelemetryUpdate(data) {
   }
 
   // 2. Update Tactical Map
-  if (mapManager && data.lat && data.lon) {
+  if (mapManager && data.lat && data.lon && (Math.abs(data.lat) > 0.001 || Math.abs(data.lon) > 0.001)) {
     mapManager.updateDronePosition(data.lat, data.lon, data.yaw, data.alt);
   }
 
-  // 3. Update Header Badges
-  valMode.textContent = data.mode || 'STABILIZE';
+  // 3. Update Header Engine & Link Badges
+  const valEngine = document.getElementById('val-engine');
+  const badgeEngine = document.getElementById('badge-engine');
+  const valMode = document.getElementById('val-mode');
+  
+  if (data.source === 'SIMULATOR') {
+    if (valEngine) {
+      valEngine.textContent = 'TACTICAL SIMULATOR (6-DOF)';
+      valEngine.style.color = '#00E5FF';
+      badgeEngine.style.borderColor = 'rgba(0, 229, 255, 0.4)';
+    }
+    valLink.textContent = 'SIM ACTIVE (20Hz)';
+    badgeLink.style.borderColor = '#00E5FF';
+    valMode.textContent = data.mode || 'STABILIZE';
+  } else {
+    // Hardware MAVLink (Pixhawk / ArduPilot / PX4 / QGC Backend)
+    if (data.link_active) {
+      if (valEngine) {
+        valEngine.textContent = `${data.autopilot || 'HARDWARE FC'} (${data.device || 'COM'})`;
+        valEngine.style.color = '#00ff88';
+        badgeEngine.style.borderColor = '#00ff88';
+      }
+      valLink.textContent = `VEHICLE LINKED (#${data.heartbeat_count || 1})`;
+      badgeLink.style.borderColor = '#00ff88';
+      valMode.textContent = data.mode || 'UNKNOWN';
+    } else if (data.link_status === 'SEARCHING') {
+      if (valEngine) {
+        valEngine.textContent = `SEARCHING: ${data.device || 'COM'}...`;
+        valEngine.style.color = '#ff9500';
+        badgeEngine.style.borderColor = '#ff9500';
+      }
+      valLink.textContent = 'WAITING FOR FC HEARTBEAT';
+      badgeLink.style.borderColor = '#ff9500';
+      valMode.textContent = 'SEARCHING...';
+    } else {
+      if (valEngine) {
+        valEngine.textContent = 'DISCONNECTED';
+        valEngine.style.color = '#8BA3B8';
+        badgeEngine.style.borderColor = '#475569';
+      }
+      valLink.textContent = 'NO VEHICLE LINK';
+      badgeLink.style.borderColor = '#ff2d55';
+      valMode.textContent = 'DISCONNECTED';
+    }
+  }
 
-  if (data.armed) {
-    badgeArm.className = 'status-pill arm-pill armed';
-    valArm.textContent = 'ARMED';
-    armBtn.className = 'tactical-btn arm-toggle-btn armed';
-    armBtnText.textContent = 'DISARM MOTORS';
+  // Arm / Disarm Status Pill
+  if (data.link_active || data.source === 'SIMULATOR') {
+    if (data.armed) {
+      badgeArm.className = 'status-pill arm-pill armed';
+      valArm.textContent = 'ARMED';
+      armBtn.className = 'tactical-btn arm-toggle-btn armed';
+      armBtnText.textContent = 'DISARM MOTORS';
+    } else {
+      badgeArm.className = 'status-pill arm-pill disarmed';
+      valArm.textContent = 'DISARMED';
+      armBtn.className = 'tactical-btn arm-toggle-btn';
+      armBtnText.textContent = 'ARM MOTORS';
+    }
   } else {
     badgeArm.className = 'status-pill arm-pill disarmed';
-    valArm.textContent = 'DISARMED';
+    valArm.textContent = 'NO LINK';
     armBtn.className = 'tactical-btn arm-toggle-btn';
     armBtnText.textContent = 'ARM MOTORS';
   }
 
   // Audio Alerts on state changes
-  if (lastArmedState !== null && lastArmedState !== data.armed) {
+  if (lastArmedState !== null && lastArmedState !== data.armed && (data.link_active || data.source === 'SIMULATOR')) {
     speakAlert(data.armed ? 'Warning: Motors Armed. Propellers Active.' : 'Motors Disarmed.');
   }
   lastArmedState = data.armed;
 
-  if (lastFlightMode !== null && lastFlightMode !== data.mode) {
+  if (lastFlightMode !== null && lastFlightMode !== data.mode && (data.link_active || data.source === 'SIMULATOR')) {
     speakAlert(`Flight Mode: ${data.mode}`);
   }
   lastFlightMode = data.mode;
+
+  if (lastLinkActive !== null && lastLinkActive !== data.link_active && data.source !== 'SIMULATOR') {
+    if (data.link_active) {
+      speakAlert(`Flight controller linked. ${data.autopilot || ''} connected.`);
+    } else if (lastLinkActive === true) {
+      speakAlert('Warning: Flight controller telemetry link lost.');
+    }
+  }
+  lastLinkActive = data.link_active;
 
   // Active Mode Button Highlight
   document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -146,12 +207,59 @@ function handleTelemetryUpdate(data) {
     }
   });
 
-  // Top Metrics
-  topBattPct.textContent = `${Math.round(data.battery_pct || 98)}%`;
-  topBattVolt.textContent = `${(data.voltage || 16.6).toFixed(1)}V`;
-  topGpsSats.textContent = `${data.satellites || 16} SATS`;
-  topGpsFix.textContent = data.fix_type >= 3 ? '3D FIX' : 'NO FIX';
-  topRssi.textContent = `${data.rssi || 99}%`;
+  // Top Metrics (GENUINE DATA - NO FAKE FALLBACKS)
+  if (data.source === 'SIMULATOR') {
+    topBattPct.textContent = `${Math.round(data.battery_pct || 98)}%`;
+    topBattVolt.textContent = `${(data.voltage || 16.6).toFixed(1)}V`;
+    topBattPct.style.color = '#ffffff';
+    topGpsSats.textContent = `${data.satellites || 16} SATS`;
+    topGpsFix.textContent = '3D FIX';
+    topGpsFix.style.color = '#00ff88';
+    topRssi.textContent = `${data.rssi || 99}%`;
+  } else if (data.link_active) {
+    // 1. Battery display
+    if (data.battery_state === 'USB_POWER') {
+      topBattPct.textContent = 'USB PWR';
+      topBattVolt.textContent = `${(data.voltage || 5.0).toFixed(1)}V`;
+      topBattPct.style.color = '#ff9500';
+    } else if (data.voltage && data.voltage > 5.5) {
+      const pct = data.battery_pct !== null && data.battery_pct !== undefined ? `${Math.round(data.battery_pct)}%` : '--%';
+      const cellTag = data.battery_cells ? ` (${data.battery_cells}S)` : '';
+      topBattPct.textContent = pct;
+      topBattVolt.textContent = `${data.voltage.toFixed(1)}V${cellTag}`;
+      if (data.battery_state === 'CRITICAL') {
+        topBattPct.style.color = '#ff2d55';
+      } else if (data.battery_state === 'LOW') {
+        topBattPct.style.color = '#ff9500';
+      } else {
+        topBattPct.style.color = '#00ff88';
+      }
+    } else {
+      topBattPct.textContent = '--%';
+      topBattVolt.textContent = 'NO BATT';
+      topBattPct.style.color = '#8BA3B8';
+    }
+
+    // 2. GPS display
+    const sats = data.satellites || 0;
+    const fixNames = { 0: 'NO GPS', 1: 'NO FIX', 2: '2D FIX', 3: '3D FIX', 4: 'DGPS', 5: 'RTK FLOAT', 6: 'RTK FIX' };
+    topGpsSats.textContent = `${sats} SATS`;
+    topGpsFix.textContent = fixNames[data.fix_type] || 'NO FIX';
+    topGpsFix.style.color = data.fix_type >= 3 ? '#00ff88' : (data.fix_type >= 2 ? '#ff9500' : '#ff2d55');
+
+    // 3. RSSI
+    topRssi.textContent = data.rssi > 0 ? `${data.rssi}%` : '--%';
+  } else {
+    // Vehicle disconnected or waiting for heartbeat
+    topBattPct.textContent = '--%';
+    topBattVolt.textContent = '--V';
+    topBattPct.style.color = '#8BA3B8';
+    topGpsSats.textContent = '-- SATS';
+    topGpsFix.textContent = data.link_status === 'SEARCHING' ? 'SEARCHING' : 'NO LINK';
+    topGpsFix.style.color = '#8BA3B8';
+    topRssi.textContent = '--%';
+  }
+
   topFlightTime.textContent = formatTime(data.flight_time || 0);
 
   // Blackbox Record Counter update
@@ -159,6 +267,42 @@ function handleTelemetryUpdate(data) {
   const elBbRecords = document.getElementById('top-blackbox-records');
   if (elBbRecords) {
     elBbRecords.textContent = `${totalBlackboxLogs} LOGS (CSV)`;
+  }
+
+  // Update Avionics Health Matrix
+  const elImu = document.getElementById('sensor-imu-val');
+  const chipImu = document.getElementById('chip-imu');
+  const elCompass = document.getElementById('sensor-compass-val');
+  const chipCompass = document.getElementById('chip-compass');
+  const elBaro = document.getElementById('sensor-baro-val');
+  const chipBaro = document.getElementById('chip-baro');
+  const elGps = document.getElementById('sensor-gps-val');
+  const chipGps = document.getElementById('chip-gps');
+
+  if (data.link_active || data.source === 'SIMULATOR') {
+    const s = data.sensors || {};
+    if (elImu && chipImu) {
+      elImu.textContent = s.imu || 'CALIBRATED';
+      chipImu.className = s.imu === 'UNHEALTHY' ? 'sensor-chip error' : 'sensor-chip ok';
+    }
+    if (elCompass && chipCompass) {
+      elCompass.textContent = s.compass || 'LOCKED';
+      chipCompass.className = s.compass === 'CALIB_REQ' ? 'sensor-chip warn' : 'sensor-chip ok';
+    }
+    if (elBaro && chipBaro) {
+      elBaro.textContent = `${(data.alt || 0).toFixed(1)}m AGL`;
+      chipBaro.className = 'sensor-chip ok';
+    }
+    if (elGps && chipGps) {
+      const fixNames = { 0: 'NO GPS', 1: 'NO FIX', 2: '2D FIX', 3: '3D FIX', 4: 'DGPS', 5: 'RTK FLOAT', 6: 'RTK FIX' };
+      elGps.textContent = `${fixNames[data.fix_type] || 'NO FIX'} (${data.satellites || 0} sats)`;
+      chipGps.className = data.fix_type >= 3 ? 'sensor-chip ok' : (data.fix_type >= 2 ? 'sensor-chip warn' : 'sensor-chip error');
+    }
+  } else {
+    if (elImu) elImu.textContent = '--';
+    if (elCompass) elCompass.textContent = '--';
+    if (elBaro) elBaro.textContent = '--';
+    if (elGps) elGps.textContent = '--';
   }
 
   // Update FPV HUD OSD Overlays
@@ -169,9 +313,9 @@ function handleTelemetryUpdate(data) {
   const fpvMode = document.getElementById('fpv-osd-mode');
   if (fpvAlt) fpvAlt.textContent = `${(data.alt || 0).toFixed(1)}m`;
   if (fpvSpd) fpvSpd.textContent = `${(data.groundspeed || 0).toFixed(1)}m/s`;
-  if (fpvBat) fpvBat.textContent = `${(data.voltage || 16.6).toFixed(1)}V`;
+  if (fpvBat) fpvBat.textContent = data.voltage ? `${data.voltage.toFixed(1)}V` : '--V';
   if (fpvHdg) fpvHdg.textContent = `${Math.round(data.yaw || 0).toString().padStart(3, '0')}°`;
-  if (fpvMode) fpvMode.textContent = data.mode || 'LOITER';
+  if (fpvMode) fpvMode.textContent = data.mode || 'DISCONNECTED';
 
   // 4. Update Quadcopter Motor Outputs
   updateMotorOutputs(data);
@@ -188,10 +332,9 @@ function handleTelemetryUpdate(data) {
   // 6. Log stream messages
   if (data.logs && Array.isArray(data.logs)) {
     data.logs.forEach(log => {
-      // Check if already in console
       const existing = Array.from(consoleOutput.children).some(el => el.textContent === log);
       if (!existing) {
-        appendLog(log, 'info');
+        appendLog(log, log.includes('WARNING') || log.includes('ERROR') || log.includes('ALERT') ? 'alert' : 'info');
       }
     });
   }
@@ -381,34 +524,298 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnConnect = document.getElementById('btn-connect');
   const fieldPort = document.getElementById('field-port');
   const fieldBaud = document.getElementById('field-baud');
+  const btnRefreshPorts = document.getElementById('btn-refresh-ports');
+  const connHelpText = document.getElementById('conn-help-text');
+  const qgcControlPanel = document.getElementById('qgc-control-panel');
+  const qgcStatusPill = document.getElementById('qgc-status-pill');
+  const btnLaunchQgc = document.getElementById('btn-launch-qgc');
+  const btnQgcCheck = document.getElementById('btn-qgc-check');
+  const topBtnLaunchQgc = document.getElementById('top-btn-launch-qgc');
+  const topQgcDot = document.getElementById('top-qgc-dot');
+  const btnPanelQgcSwitch = document.getElementById('btn-panel-qgc-switch');
+
+  async function checkQgcStatus() {
+    try {
+      const res = await fetch('/api/qgc/status');
+      const d = await res.json();
+      if (d.running) {
+        if (qgcStatusPill) {
+          qgcStatusPill.textContent = 'RUNNING (ONLINE)';
+          qgcStatusPill.style.background = 'rgba(0, 255, 136, 0.2)';
+          qgcStatusPill.style.color = '#00ff88';
+          qgcStatusPill.style.borderColor = '#00ff88';
+        }
+        if (btnLaunchQgc) btnLaunchQgc.textContent = '✓ QGC RUNNING (ACTIVE)';
+        if (topBtnLaunchQgc) {
+          const txt = topBtnLaunchQgc.querySelector('span');
+          if (txt) txt.textContent = '✓ QGC ACTIVE';
+          topBtnLaunchQgc.style.borderColor = '#00ff88';
+          topBtnLaunchQgc.style.color = '#00ff88';
+        }
+        if (topQgcDot) {
+          topQgcDot.style.background = '#00ff88';
+          topQgcDot.style.boxShadow = '0 0 6px #00ff88';
+        }
+      } else {
+        if (qgcStatusPill) {
+          qgcStatusPill.textContent = 'NOT RUNNING';
+          qgcStatusPill.style.background = 'rgba(255, 149, 0, 0.2)';
+          qgcStatusPill.style.color = '#ff9500';
+          qgcStatusPill.style.borderColor = '#ff9500';
+        }
+        if (btnLaunchQgc) btnLaunchQgc.textContent = '🚀 LAUNCH QGC BACKEND';
+        if (topBtnLaunchQgc) {
+          const txt = topBtnLaunchQgc.querySelector('span');
+          if (txt) txt.textContent = '🚀 LAUNCH QGC BACKEND';
+          topBtnLaunchQgc.style.borderColor = '#00e5ff';
+          topBtnLaunchQgc.style.color = '#00e5ff';
+        }
+        if (topQgcDot) {
+          topQgcDot.style.background = '#ff9500';
+          topQgcDot.style.boxShadow = 'none';
+        }
+      }
+    } catch (e) {
+      console.error('QGC status check failed:', e);
+    }
+  }
+
+  async function triggerLaunchQgc() {
+    if (btnLaunchQgc) btnLaunchQgc.textContent = '⏳ LAUNCHING QGC...';
+    if (topBtnLaunchQgc) {
+      const txt = topBtnLaunchQgc.querySelector('span');
+      if (txt) txt.textContent = '⏳ LAUNCHING QGC...';
+    }
+    try {
+      const res = await fetch('/api/qgc/launch', { method: 'POST' });
+      const d = await res.json();
+      appendLog(`[QGC] ${d.message}`, d.status === 'ok' ? 'info' : 'alert');
+      speakAlert(d.status === 'ok' ? 'Launching QGroundControl backend.' : 'Failed to launch QGroundControl.');
+      setTimeout(checkQgcStatus, 1500);
+    } catch (e) {
+      appendLog(`[QGC ERROR] ${e.message}`, 'alert');
+    }
+  }
+
+  if (btnLaunchQgc) {
+    btnLaunchQgc.addEventListener('click', triggerLaunchQgc);
+  }
+
+  if (topBtnLaunchQgc) {
+    topBtnLaunchQgc.addEventListener('click', () => {
+      triggerLaunchQgc();
+      connModeSelect.value = 'qgc';
+      updateConnFields();
+    });
+  }
+
+  if (btnPanelQgcSwitch) {
+    btnPanelQgcSwitch.addEventListener('click', () => {
+      connModeSelect.value = 'qgc';
+      updateConnFields();
+      checkQgcStatus();
+      appendLog('[COMM] Switched to QGroundControl Backend link mode.', 'info');
+    });
+  }
+
+  if (btnQgcCheck) {
+    btnQgcCheck.addEventListener('click', () => {
+      checkQgcStatus();
+    });
+  }
 
   function updateConnFields() {
-    const isSerial = connModeSelect.value === 'serial';
+    const mode = connModeSelect.value;
+    const isQgc = mode === 'qgc';
+    const isSerial = mode === 'serial';
+    const isUdp = mode === 'udp';
+
+    if (qgcControlPanel) qgcControlPanel.style.display = isQgc ? 'flex' : 'none';
     fieldPort.style.display = isSerial ? 'flex' : 'none';
     fieldBaud.style.display = isSerial ? 'flex' : 'none';
-  }
-  connModeSelect.addEventListener('change', updateConnFields);
-  updateConnFields();
 
-  // Load available COM ports
-  fetch('/api/ports')
-    .then(r => r.json())
-    .then(d => {
-      if (d.ports && d.ports.length > 0) {
-        connPortSelect.innerHTML = '';
-        d.ports.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.device;
-          opt.textContent = `${p.device} (${p.description})`;
-          connPortSelect.appendChild(opt);
-        });
+    if (isQgc) {
+      btnConnect.textContent = 'LINK AERO-Q TO QGC BACKEND';
+      checkQgcStatus();
+      if (connHelpText) {
+        connHelpText.style.display = 'block';
+        connHelpText.style.background = 'rgba(0, 229, 255, 0.08)';
+        connHelpText.style.color = '#00E5FF';
+        connHelpText.innerHTML = '⚡ <strong>QGC Backend Mode</strong>: QGroundControl manages drone hardware; Aero-Q UI displays tactical flight telemetry.';
+      }
+    } else if (isSerial) {
+      btnConnect.textContent = 'CONNECT HARDWARE SERIAL';
+      if (connHelpText) {
+        connHelpText.style.display = 'block';
+        updateBaudHint();
+      }
+    } else if (isUdp) {
+      btnConnect.textContent = 'LISTEN ON UDP:14550';
+      if (connHelpText) {
+        connHelpText.style.display = 'block';
+        connHelpText.style.background = 'rgba(0, 229, 255, 0.08)';
+        connHelpText.style.color = '#8BA3B8';
+        connHelpText.textContent = 'Listening on UDP port 14550 (Standard for SITL / Companion Computer).';
+      }
+    } else {
+      btnConnect.textContent = 'ACTIVATE SIMULATOR';
+      if (connHelpText) connHelpText.style.display = 'none';
+    }
+  }
+
+  function updateBaudHint() {
+    if (!connHelpText || connModeSelect.value !== 'serial') return;
+    const baud = connBaudSelect.value;
+    if (baud === '115200') {
+      connHelpText.innerHTML = '<strong>Direct USB Cable</strong>: Recommended baud 115200. Use a data-capable USB cable.';
+    } else if (baud === '921600') {
+      connHelpText.innerHTML = '<strong>High-Speed USB</strong>: Recommended baud 921600 for high-bandwidth telemetry.';
+    } else {
+      connHelpText.innerHTML = '<strong>Wireless Telemetry</strong>: Recommended baud 57600 (SiK / 3DR 433/915 MHz).';
+    }
+    connHelpText.style.background = 'rgba(0, 229, 255, 0.08)';
+    connHelpText.style.color = '#8BA3B8';
+  }
+
+  connModeSelect.addEventListener('change', () => {
+    updateConnFields();
+    if (connModeSelect.value === 'serial') {
+      loadSerialPorts();
+    }
+  });
+  connBaudSelect.addEventListener('change', updateBaudHint);
+  updateConnFields();
+  checkQgcStatus();
+
+  // One-Click Auto-Detect & Connect Flight Controller
+  const btnAutoConnect = document.getElementById('btn-auto-connect');
+  if (btnAutoConnect) {
+    btnAutoConnect.addEventListener('click', async () => {
+      btnAutoConnect.textContent = '⏳ SCANNING ALL COM PORTS...';
+      btnAutoConnect.disabled = true;
+      appendLog('[AUTOCONNECT] Scanning all COM ports for Pixhawk / ArduPilot / PX4 MAVLink vehicle...', 'info');
+      speakAlert('Scanning ports for flight controller.');
+      try {
+        const res = await fetch('/api/autoconnect', { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          speakAlert(`Flight controller connected on ${data.port}.`);
+          appendLog(`[AUTOCONNECT] ✓ ${data.message}`, 'info');
+          connModeSelect.value = 'serial';
+          updateConnFields();
+          await loadSerialPorts(true);
+          connPortSelect.value = data.port;
+          connBaudSelect.value = (data.baud || 115200).toString();
+          updateBaudHint();
+        } else {
+          speakAlert('No flight controller detected.');
+          appendLog(`[AUTOCONNECT] ⚠️ ${data.message}`, 'alert');
+          alert(`Auto-Detect Result:\n\n${data.message}\n\nTroubleshooting:\n1. Ensure USB cable supports DATA (not charging only)\n2. Ensure flight controller is powered on (LEDs blinking)\n3. Check Windows Device Manager under "Ports (COM & LPT)"`);
+        }
+      } catch (err) {
+        appendLog(`[AUTOCONNECT ERROR] ${err.message}`, 'alert');
+      } finally {
+        btnAutoConnect.textContent = '⚡ AUTO-DETECT & CONNECT DRONE';
+        btnAutoConnect.disabled = false;
       }
     });
+  }
+
+  // Load available COM ports with auto-detection & user feedback
+  async function loadSerialPorts(silent = false) {
+    try {
+      const res = await fetch('/api/ports');
+      const data = await res.json();
+      const currentVal = connPortSelect.value;
+      connPortSelect.innerHTML = '';
+
+      if (data.ports && data.ports.length > 0) {
+        let bestPort = null;
+        data.ports.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.device;
+          const tag = p.is_fc ? ' 🎯 [FLIGHT CONTROLLER]' : (p.is_radio ? ' 📡 [TELEMETRY RADIO]' : '');
+          opt.textContent = `${p.device} - ${p.description}${tag}`;
+          connPortSelect.appendChild(opt);
+          if (p.is_fc || p.is_radio) {
+            bestPort = p;
+          }
+        });
+
+        // Restore previously selected port if still valid, otherwise prioritize FC
+        if (data.ports.some(p => p.device === currentVal)) {
+          connPortSelect.value = currentVal;
+        } else if (bestPort) {
+          connPortSelect.value = bestPort.device;
+          if (bestPort.recommended_baud) {
+            connBaudSelect.value = bestPort.recommended_baud.toString();
+          }
+        }
+
+        if (connHelpText && connModeSelect.value === 'serial') {
+          connHelpText.style.display = 'block';
+          connHelpText.style.background = 'rgba(0, 255, 136, 0.1)';
+          connHelpText.style.color = '#00ff88';
+          connHelpText.innerHTML = `✓ ${data.ports.length} Port(s) detected: <strong>${connPortSelect.value}</strong>. Ready to connect.`;
+        }
+        if (!silent) {
+          appendLog(`[COMM] Detected ${data.ports.length} serial device(s).`, 'info');
+        }
+      } else {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.disabled = true;
+        opt.selected = true;
+        opt.textContent = '⚠️ No Drone / COM Ports Detected';
+        connPortSelect.appendChild(opt);
+
+        if (connHelpText && connModeSelect.value === 'serial') {
+          connHelpText.style.display = 'block';
+          connHelpText.style.background = 'rgba(255, 149, 0, 0.1)';
+          connHelpText.style.color = '#ff9500';
+          connHelpText.innerHTML = '⚠️ <strong>No COM port detected by Windows</strong>. Check USB cable (must support data), power, or drivers.';
+        }
+        if (!silent) {
+          appendLog('[COMM] No serial devices found on system.', 'alert');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load serial ports:', err);
+    }
+  }
+
+  // Initial scan
+  loadSerialPorts(true);
+
+  // Manual Rescan Button
+  if (btnRefreshPorts) {
+    btnRefreshPorts.addEventListener('click', async () => {
+      btnRefreshPorts.textContent = '⏳ SCANNING...';
+      await loadSerialPorts(false);
+      btnRefreshPorts.textContent = '🔄 RESCAN';
+    });
+  }
+
+  // Auto-poll ports every 4 seconds when in serial mode
+  setInterval(() => {
+    if (connModeSelect.value === 'serial') {
+      loadSerialPorts(true);
+    } else if (connModeSelect.value === 'qgc') {
+      checkQgcStatus();
+    }
+  }, 4000);
 
   btnConnect.addEventListener('click', async () => {
     const mode = connModeSelect.value;
     const port = connPortSelect.value;
-    const baud = parseInt(connBaudSelect.value) || 57600;
+    const baud = parseInt(connBaudSelect.value) || 115200;
+
+    if (mode === 'serial' && (!port || port === '')) {
+      const msg = 'No COM Port detected! Please connect your drone or telemetry radio to USB, then click RESCAN.';
+      alert(msg);
+      appendLog('[COMM ERROR] ' + msg, 'alert');
+      return;
+    }
 
     btnConnect.textContent = 'CONNECTING...';
     try {
@@ -419,13 +826,24 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const data = await res.json();
       if (data.status === 'ok') {
-        speakAlert(`Connected to ${data.mode}. Telemetry established.`);
-        appendLog(`[COMM] Connected successfully in ${data.mode} mode.`, 'info');
+        if (mode === 'simulation') {
+          speakAlert('Switched to Flight Simulator mode.');
+          appendLog('[COMM] Switched to Built-in Tactical Flight Simulator.', 'info');
+        } else {
+          speakAlert(`Connecting to ${data.device || port}. Waiting for vehicle heartbeat.`);
+          appendLog(`[COMM] Port ${data.device || port} opened at ${data.baud || baud} baud. Waiting for vehicle heartbeat...`, 'info');
+        }
       } else {
-        alert(data.message || 'Connection failed');
+        const errorMsg = data.message || 'Connection failed.';
+        speakAlert('Connection failed.');
+        appendLog(`[COMM ERROR] ${errorMsg}`, 'alert');
+        alert(`Connection Failed:\n\n${errorMsg}\n\nTroubleshooting:\n1. Ensure USB cable supports DATA (not charging only)\n2. Ensure flight controller is powered on (LEDs blinking)\n3. Check Windows Device Manager under "Ports (COM & LPT)"\n4. Try clicking "⚡ AUTO-DETECT & CONNECT DRONE"`);
       }
+    } catch (netErr) {
+      appendLog(`[COMM ERROR] Server request failed: ${netErr.message}`, 'alert');
+      alert(`Server error: ${netErr.message}`);
     } finally {
-      btnConnect.textContent = 'ESTABLISH LINK';
+      updateConnFields();
     }
   });
 
